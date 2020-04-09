@@ -1,6 +1,7 @@
 const CELSIUS = -273.15 //converting kelvin to celsius for humam understanding
 const KEY = "f0c57c94bbb9dad436b198bd695ec2ff" // API key of openweather.org
 const INTERVAL = 1000
+const LINK = "https://api.openweathermap.org/data/2.5/forecast?"
 
 function convert_unix(time) {
   // This will convert EPOCH time or Unix time into Human readable time
@@ -55,10 +56,11 @@ function sendRequest(link) {
 }
 
 function getOriginalLink() {
-  return "https://api.openweathermap.org/data/2.5/forecast?"
+  return LINK
 }
 
-function getCountryCode(location_name) {
+function getCountryCode(location) {
+  let location_name = location.location_name
   let link = getOriginalLink()
   let result = ""
   link += "q=" + location_name + "&&APPID=" + KEY
@@ -66,27 +68,33 @@ function getCountryCode(location_name) {
   return result
 }
 
+function generateResult(location, countryCode) {
+  let postal_code = location.postal_code
+  let location_name = location.location_name
+
+  let link = getOriginalLink()
+
+  link += "zip=" + postal_code + "," + countryCode + "&&APPID=" + KEY
+
+  let result = sendRequest(link)
+  result =
+    location_name +
+    " " +
+    Math.floor(result.list[0].main.temp + CELSIUS) +
+    " C " +
+    convert_unix(result.list[0].dt)
+  return result
+}
+
 function getWeatherDetail(locationDetail) {
   if (locationDetail.length > 0) {
     locationDetail.forEach(function (location, index) {
       if (checkArrayHasKeyOrNot(location)) {
-        let postal_code = location.postal_code
-        let location_name = location.location_name
+        let countryCode = getCountryCode(location)
 
-        let countryCode = getCountryCode(location_name)
-        countryCode = countryCode.city.country
-        if (countryCode) {
-          countryCode
-          let link = getOriginalLink()
-          link += "zip=" + postal_code + "," + countryCode + "&&APPID=" + KEY
-
-          let result = sendRequest(link)
-          result =
-            location_name +
-            " " +
-            Math.floor(result.list[0].main.temp + CELSIUS) +
-            " C " +
-            convert_unix(result.list[0].dt)
+        if (countryCode.city != undefined) {
+          countryCode = countryCode.city.country
+          let result = generateResult(location, countryCode)
           console.log(result)
         } else {
           console.log("Country code not found")
