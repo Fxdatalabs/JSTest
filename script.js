@@ -1,10 +1,10 @@
-const celsius = -273.15 //converting kelvin to celsius for humam understanding
-
-const key = "f0c57c94bbb9dad436b198bd695ec2ff" // API key of openweather.org
+const CELSIUS = -273.15 //converting kelvin to celsius for humam understanding
+const KEY = "f0c57c94bbb9dad436b198bd695ec2ff" // API key of openweather.org
+const INTERVAL = 1000
 
 function convert_unix(time) {
   // This will convert EPOCH time or Unix time into Human readable time
-  let date = new Date(time * 1000)
+  let date = new Date(time * INTERVAL)
   let day = "0" + date.getDate()
   let mon = date.getMonth()
   let months = [
@@ -43,52 +43,50 @@ function checkArrayHasKeyOrNot(location) {
   )
 }
 
-function sendRequest(link, location_name) {
+function sendRequest(link) {
   let request = new XMLHttpRequest()
   request.open("GET", link, false)
   let result = ""
-  request.onload = function() {
-    let obj = JSON.parse(this.response)
-    result =
-      location_name +
-      " " +
-      Math.floor(obj.list[0].main.temp + celsius) +
-      " C " +
-      convert_unix(obj.list[0].dt)
+  request.onload = function () {
+    result = JSON.parse(this.response)
   }
   request.send()
   return result
 }
 
-function getCountryCode(link, location_name) {
-  let request = new XMLHttpRequest()
-  link += "q=" + location_name + "&&APPID=" + key
-  let countryCode = ""
-  request.open("GET", link, false)
-  request.onload = function() {
-    let list = JSON.parse(this.response)
-    countryCode = list.city.country
-  }
-  request.send()
-  return countryCode
+function getOriginalLink() {
+  return "https://api.openweathermap.org/data/2.5/forecast?"
+}
+
+function getCountryCode(location_name) {
+  let link = getOriginalLink()
+  let result = ""
+  link += "q=" + location_name + "&&APPID=" + KEY
+  result = sendRequest(link)
+  return result
 }
 
 function getWeatherDetail(locationDetail) {
   if (locationDetail.length > 0) {
-    locationDetail.forEach(function(location, index) {
-      link = "https://api.openweathermap.org/data/2.5/forecast?"
+    locationDetail.forEach(function (location, index) {
       if (checkArrayHasKeyOrNot(location)) {
-        let postal_code = 0
-        let location_name = ""
+        let postal_code = location.postal_code
+        let location_name = location.location_name
 
-        postal_code = location.postal_code
-        location_name = location.location_name
-
-        let countryCode = getCountryCode(link, location_name)
+        let countryCode = getCountryCode(location_name)
+        countryCode = countryCode.city.country
         if (countryCode) {
-          link += "zip=" + postal_code + "," + countryCode + "&&APPID=" + key
+          countryCode
+          let link = getOriginalLink()
+          link += "zip=" + postal_code + "," + countryCode + "&&APPID=" + KEY
 
-          let result = sendRequest(link, location_name)
+          let result = sendRequest(link)
+          result =
+            location_name +
+            " " +
+            Math.floor(result.list[0].main.temp + CELSIUS) +
+            " C " +
+            convert_unix(result.list[0].dt)
           console.log(result)
         } else {
           console.log("Country code not found")
